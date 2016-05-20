@@ -99,7 +99,8 @@ select  date, affiliate_id,
 count(*) as appear
 from affiliates_revenue 
 group by date, affiliate_id;
-
+/*revisar si se pueden hacer operaciones en el update para ahorrarnos la columna de appear
+*/
 update affiliates_revenue a
 join  appear_temp b
 on  a.date = b.date
@@ -182,4 +183,5 @@ set a.affiliate_name = b.affiliate_name;
 delete from pruebas where gross_revenue = 0 and
 net_revenue = 0 and gross_orders = 0 
 and net_orders = 0 and new_orders = 0;
+
 select * from affiliates_revenue
