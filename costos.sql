@@ -14,7 +14,7 @@ cost/xr as marketing_cost
 from marketing.Ingenious_BasketExport g
 join A_E_BI_ExchangeRate_EUR_EXTERNAL_Marketing m
 on g.monthnum = m.monthnum  
-and g.country + m.country
+and g.country = m.country
 where (g.date between '2015-01-01' and '2016-01-31') 
 and product_quantity = 1 and country  = 'ARG' 
 group by country, date, MonthNum, channel,affiliate_id,product_category_label, order_ID, product_id)  ;
