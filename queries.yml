@@ -1,0 +1,132 @@
+cityads_nov:
+  "Select country, date, P.MonthNum, 'Affiliates' as channel_group, channel, campaign, OrderNum, sum(marketing_cost) / MXN as marketing_cost from (Select a.country, a.date, a.MonthNum, 'Affiliates' as channel_group, b.channel, b.campaign, a.OrderNum, a.commission_paid as marketing_cost from marketing.cityads_validated_orders a join development_mx.A_Master b on a.ordernum = b.OrderNum group by country, date, MonthNum, channel_group, channel, campaign, OrderNum) P JOIN regional.M_ExchangeRate m ON P.monthnum = m.monthnum and type = 'EXTERNAL' and currency = 'EUR' group by country, date, MonthNum, channel_group, channel, campaign, OrderNum;"
+
+cityads:
+  "Select country, g.MonthNum as MonthNum, date, 'Affiliates' as channel_group, channel, campaign as affiliate_id, OrderNum, SKUSimple, sum(CASE WHEN campaign not like '%!_COBRAND!_%'and campaign not like '%oppo%' and campaign not like '%!_COBRAND-%' escape '!' then rev*orderaftercan  END) * 0.07 / MXN as marketing_cost from development_mx.A_Master g join regional.M_ExchangeRate m 
+  on g.monthnum = m.monthnum 
+  where orderBeforeCan = 1 and g.monthnum >= 201501 and type = 'EXTERNAL' and currency = 'EUR' and channelgroup='affiliates' and channel = 'CityAds' and (date between '2015-06-30' and '2015-09-30' OR date >= '2015-12-01' or date in ('2015-10-02', '2015-10-03', '2015-10-04'))
+  group by country,g.monthnum, date, channelgroup,channel,campaign, OrderNum, SKUSimple
+
+  union
+
+  Select country, P.MonthNum, date, 'Affiliates' as channel_group, channel, campaign as affiliate_id, OrderNum, SKUSimple, sum(marketing_cost) / MXN as marketing_cost from (Select a.country, a.date, a.MonthNum, 'Affiliates' as channel_group, b.channel, b.campaign, a.OrderNum, b.SKUSimple, a.commission_paid as marketing_cost from marketing.cityads_validated_orders a join development_mx.A_Master b on a.ordernum = b.OrderNum group by country, date, MonthNum, channel_group, channel, campaign, OrderNum, SKUSimple)
+  P JOIN regional.M_ExchangeRate m ON P.monthnum = m.monthnum and type = 'EXTERNAL' and currency = 'EUR' group by country, date, MonthNum, channel_group, channel, campaign, OrderNum, SKUSimple
+
+  ;"
+
+cat_master:
+  "Select SKUSimple, CatBU from development_:7:.A_Master where date >= '2015-01-01' group by SKUSimple;"
+
+global:
+  "Select * from GlobalConfig.app_mobile_cost;"
+
+install:
+  "Select date, date_format(date,'%Y%m') as MonthNum, count(*) from mobile.BI_adjust_install where network = 'Piggi' group by date;"
+
+adry_mas:
+  "select distinct
+  country,g.monthnum as MonthNum,date,channelgroup as channel_group,channel,
+  case when substring_index(campaign,'-',1) REGEXP '^[0-9]+$' and 
+  LENGTH(substring_index(campaign,'-',1))<=5  then substring_index(campaign,'-',1) else campaign end as affiliate_id, 
+  campaign, OrderNum, CatBU, SKUSimple,
+  sum(NMV*orderaftercan)/:5: net_revenue,
+  sum(NMV*orderbeforecan)/:5:  gross_revenue,
+  sum(rev*pending)/:5:  pending_revenue,
+  sum(rev*cancelled)/:5:  canceled_revenue,
+  sum(pcone*orderaftercan)/:5:  pcone,
+  sum(pconepfive*orderaftercan)/:5:  pconepfive,
+  sum(pctwo*orderaftercan)/:5:  pctwo,
+  count(distinct(case when orderbeforecan = 1 then ordernum end)) as gross_orders,
+  count(distinct(case when orderaftercan = 1 then ordernum end)) as net_orders,
+  count(distinct(case when orderaftercan = 1 and newreturning = 'new' then customernum end)) as new_customers,
+  count(distinct(case when orderaftercan = 1 and newreturning = 'returning' then customernum end)) as returning_customers,
+  count(distinct(case when orderaftercan = 1 and newreturning = 'new' and (couponcode like 'CAC%'or campaign like '%!_CAC!_%' escape '!') then customernum end)) as cac_customers
+  from development_:4:.A_Master g
+      join regional.M_ExchangeRate m 
+      on g.monthnum = m.monthnum 
+      where orderBeforeCan = 1 and g.monthnum >= 201501 and type = 'EXTERNAL' and currency = 'EUR' and channelgroup='affiliates'
+  group by country,g.monthnum, date, channelgroup,channel,affiliate_id,campaign, OrderNum, CatBU, SKUSimple;"
+
+
+visitas:
+  "select distinct country,g.yrmonth as MonthNum,date,h.channel,j.channel_group, case when substring_index(campaign,'-',1) REGEXP '^[0-9]+$' and LENGTH(substring_index(campaign,'-',1))<=5  then substring_index(campaign,'-',1) else campaign end as affiliate_id,
+  sum(visits) as visits
+  from marketing_%s.ga_performance g
+  join marketing.channel h on g.fk_channel = h.id_channel
+  join  marketing.channel_group j on g.fk_channel_group = j.id_channel_group 
+  where yrmonth >= 201501 and visits > 0  and channel_group='Affiliates'
+  group by country,g.yrmonth,date, g.fk_channel,g.fk_channel_group,affiliate_id;"
+
+app_visits:
+  "select distinct UCASE(Country) AS country, date_format(date,'%Y%m') as MonthNum,date,v.channel,v.channel_group, campaign as affiliate_id, sum(session) as visits
+  from marketing.BI_adjust_session v
+  where  date>='2015-01-01' and  country = ':1:'
+  and channel_group='affiliates'
+  group by country,MonthNum,date,channel_group,channel,campaign;"
+
+ing_cost_bef:
+  "Select country, g.MonthNum, date, 'Affiliates' channel_group, channel, affiliate_id, OrderNum, SKUSimple, cost/:8: as marketing_cost,(cost/:8:)*1.1125 
+  from (Select country, date_format(date,'%Y%m') as MonthNum, date, channel, affiliate_id, order_ID as OrderNum, product_ID as SKUSimple,
+  sum(commission_paid) as cost
+  from marketing.Ingenious_BasketExport 
+  where product_quantity = 1 and country  = ':2:' group by country, date, MonthNum, channel,affiliate_id, order_ID, product_id) g 
+  join regional.M_ExchangeRate m
+  on g.monthnum = m.monthnum  
+  where g.date between '2015-01-01' and '2016-01-31' and type = 'EXTERNAL' and currency = 'EUR';"
+
+ing_cost_aft:
+  "Select P.country,
+    P.MonthNum,
+    P.date,
+    'Affiliates' channel_group,
+    channel,
+    affiliate_id,
+    OrderNum,
+    SKUSimple, marketing_cost / :3: as marketing_cost from (SELECT 
+    a.country,
+    a.MonthNum,
+    a.date,
+    'Affiliates' channel_group,
+    channel,
+    affiliate_id,
+    OrderNum,
+    SKUSimple,
+    SUM(CASE
+        WHEN keyword NOT LIKE '%!_COBRAND!_%' ESCAPE '!' THEN commission
+    END) AS marketing_cost
+    FROM
+    (SELECT DISTINCT
+        a.country,
+            DATE_FORMAT(a.date, '%Y%m') AS MonthNum,
+            a.date,
+            a.channel,
+            affiliate_id,
+            a.order_ID AS OrderNum,
+            b.itemid,
+            a.product_ID AS SKUSimple,
+            product_commission_total AS commission,
+            a.channel_group,
+            b.ga_keyword AS keyword
+    FROM
+        marketing.Ingenious_BasketExport a
+    JOIN development_:8:.A_Master b ON a.order_ID = b.Ordernum
+        AND a.product_ID = b.SKUSimple
+        AND a.country = b.country
+    WHERE
+        a.country = ':6:'
+            AND b.orderaftercan = 1s
+            AND ventureID = 1
+            AND ChannelGroup IN ('Affiliates')
+    GROUP BY country, a.channel , ordernum , b.itemid) a
+    GROUP BY a.country , date , channel , OrderNum , SKUSimple) P JOIN
+    regional.M_ExchangeRate m ON P.monthnum = m.monthnum and type = 'EXTERNAL' and currency = 'EUR';"
+
+Impresiones:
+  "select affiliate_id,country,date,country, sum(impressions) as impressions,sum(click_rate)/count(click_rate) as click_rate,
+  from mrketing.affiliates_export where date >= '2015-01"
+
+cityads_bu:
+  "Select country, g.MonthNum as MonthNum, date, 'Affiliates' as channel_group, channel, campaign, OrderNum, SKUSimple, sum(CASE WHEN campaign not like '%!_COBRAND!_%'and campaign not like '%oppo%' and campaign not like '%!_COBRAND-%' escape '!' then rev*orderaftercan  END) * 0.07 / MXN as marketing_cost from development_mx.A_Master g join regional.M_ExchangeRate m 
+  on g.monthnum = m.monthnum 
+  where orderBeforeCan = 1 and g.monthnum >= 201501 and type = 'EXTERNAL' and currency = 'EUR' and channelgroup='affiliates' and channel = 'CityAds'
+  group by country,g.monthnum, date, channelgroup,channel,campaign, OrderNum, SKUSimple;"

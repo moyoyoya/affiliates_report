@@ -1,0 +1,29 @@
+mysql1:
+  user: 'andres.astorga'
+  password: "#dF,YTu9JL2A^u"
+  host: '172.17.12.49'
+  db: 'CRM_bases'
+mysql2:
+  user: 'andres.astorga'
+  password: 'andres'
+  host: '10.208.4.154'
+  db: 'webtrekk_mx'
+mysql3:
+  user: 'andres.astorga'
+  password: 'Gu7c7dK64E8G9nj'
+  host: '172.31.15.140'
+  db: 'BI'
+cat:
+  'catbp'
+actions:
+  - 'purchases'
+  - 'views'
+countries:
+  - mx
+  - co
+  - pe 
+  - ve
+devel:
+  co: "co_project"
+days:
+  90
